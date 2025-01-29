@@ -106,6 +106,7 @@ def check_domain_security(domains):
     error_spf_policy_domains = []
     error_no_dmarc_domains = []
     error_dmarc_validity_domains = []
+    error_dmarc_policy_domains = []
 
     for domain in domains:
         domain = domain.strip()
@@ -136,7 +137,7 @@ def check_domain_security(domains):
                             "SPF record missing failure behavior value for '%s'" % domain)
                         error_spf_policy_domains.append(domain)
                 else:
-                    addition_checks_success = True
+                    additional_checks_success = True
                     if args.spf_mandatory_include:
                         
                         if "include" not in spf_results["parsed"].keys():
@@ -153,9 +154,9 @@ def check_domain_security(domains):
                                 if not success:
                                     print_warning(
                                         "'%s' is not included in SPF for '%s'. That is not a security issue but may prevent legitimate hosts to send emails." % (mandatory_domain, domain))
-                                    addition_checks_success = False
+                                    additional_checks_success = False
                                     error_spf_include_domains.append(domain)
-                    if addition_checks_success:
+                    if additional_checks_success:
                         print_success("SPF correctly configured for '%s'" % domain)
                     
             except checkdmarc.DNSException:
@@ -197,7 +198,62 @@ def check_domain_security(domains):
                 
                 print_verbose("DMARC Record : %s" % dmarc_data["record"])
                 
-                print_success("DMARC correctly configured for '%s'" % domain)
+                additional_checks_success = True
+                # Check policy value
+                if not "p" in dmarc_data["parsed"]["tags"].keys():
+                    print_warning(
+                        "No 'p' value defined in DMARC record for '%s'" % domain)
+                    additional_checks_success = False
+                    error_dmarc_policy_domains.append(domain)
+                else:
+                    policy = dmarc_data["parsed"]["tags"]["p"]["value"]
+                    if policy == "none":
+                        print_warning(
+                            "Defined policy is 'none' in DMARC record for '%s'" % domain)
+                        additional_checks_success = False
+                        error_dmarc_policy_domains.append(domain)
+                    elif policy == "quarantine":
+                        print_info(
+                            "Defined policy is 'quarantine' in DMARC record for '%s'" % domain)
+                    elif policy == "reject":
+                        pass
+                    else:
+                        print_warning(
+                            "Unknown policy '%s' in DMARC record for '%s'" % (policy, domain))
+                        additional_checks_success = False
+                        error_dmarc_policy_domains.append(domain)
+                        
+                # Check pct value
+                if not "pct" in dmarc_data["parsed"]["tags"].keys():
+                    print_warning(
+                        "No 'pct' value defined in DMARC record for '%s'" % domain)
+                    additional_checks_success = False
+                    error_dmarc_policy_domains.append(domain)
+                else:
+                    pct = dmarc_data["parsed"]["tags"]["pct"]["value"]
+                    if pct != 100:
+                        print_warning(
+                            "Defined pct is '%i' in DMARC record for '%s'" % (pct, domain))
+                        additional_checks_success = False
+                        error_dmarc_policy_domains.append(domain)
+                    else:
+                        if not dmarc_data["parsed"]["tags"]["pct"]["explicit"]:
+                            print_info(
+                                "Field 'pct' is not explicitly defined in DMARC record for '%s', default value is '%i'" % (domain, pct))
+
+                # Check rua and ruaf values
+                for field in ["rua", "ruf"]:
+                    if not "rua" in dmarc_data["parsed"]["tags"].keys():
+                        print_warning(
+                            "No '%s' value defined in DMARC record for '%s'" % (field, domain))
+                        additional_checks_success = False
+                        error_dmarc_policy_domains.append(domain)
+                    else:
+                        # TODO check if it is a valid email
+                        pass
+
+                if additional_checks_success:
+                    print_success("DMARC correctly configured for '%s'" % domain)
             except checkdmarc.DNSException:
                 print_error(
                     "A general DNS error has occured when performing DMARC analysis")
@@ -279,7 +335,13 @@ def check_domain_security(domains):
               len(error_dmarc_validity_domains))
         for domain in error_dmarc_validity_domains:
             print(Fore.CYAN, "  > %s" % domain)
-            
+   
+    if len(error_dmarc_policy_domains) > 0:
+        print(Fore.CYAN, "\n\n Invalid DMARC policy for %d domain(s): " %
+              len(error_dmarc_policy_domains))
+        for domain in error_dmarc_policy_domains:
+            print(Fore.CYAN, "  > %s" % domain)
+                     
 def print_error(message, fatal=True):
     print(Fore.RED, "[!] ERROR: %s" % message)
     if fatal:
