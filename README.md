@@ -13,6 +13,7 @@ Email spoofing is identified under the following conditions:
    - DMARC record contains a syntax error
    - Multiple DMARC records exist
 
+An additional check can be performed to verify if a set of includes is present in the SPF with the `--spf-mandatory-include` flag.
 
 # Getting Started
 Grab the latest release and install the package requirements by running `pip3 install -r requirements.txt`. EmailSecCheck was developed for Python 3.
@@ -27,6 +28,18 @@ python3 emailseccheck.py --domain <domain_here>
 python3 emailseccheck.py --domains_file <path_to_file_here>
 ```
 
-## Example
-![image](https://user-images.githubusercontent.com/8473031/138940399-452c0f6c-3a4d-4b0a-b5dc-f43d7e6245d3.png)
+## Usage
+```
+usage: emailseccheck.py [-h] (--domain DOMAIN | --domains_file DOMAINS_FILE) [-v] [-os | -od] [--spf-mandatory-include [SPF_MANDATORY_INCLUDE ...]]
 
+options:
+  -h, --help            show this help message and exit
+  --domain DOMAIN       Domain to check for SPF/DMARC issues (default: None)
+  --domains_file DOMAINS_FILE
+                        File containing list of domains to check for SPF/DMARC issues (default: None)
+  -v, --verbose         Show verbose output (default: False)
+  -os, --only-spf       Only check SPF (default: False)
+  -od, --only-dmarc     Only check DMARC (default: False)
+  --spf-mandatory-include [SPF_MANDATORY_INCLUDE ...]
+                        Verify that this specific spf include is present (Example: spf.protection.outlook.com) (default: None)
+```
