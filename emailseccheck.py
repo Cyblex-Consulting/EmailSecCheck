@@ -110,7 +110,7 @@ def check_domain_security(domains):
 
     for domain in domains:
         domain = domain.strip()
-        print_info("Analyzing %s" % domain)
+        print_info("Analyzing %s" % domain, new_section=True)
 
         spoofing_possible_spf = False
         spoofing_possible_dmarc = False
@@ -204,14 +204,16 @@ def check_domain_security(domains):
                     print_warning(
                         "No 'p' value defined in DMARC record for '%s'" % domain)
                     additional_checks_success = False
-                    error_dmarc_policy_domains.append(domain)
+                    if domain not in error_dmarc_policy_domains:
+                        error_dmarc_policy_domains.append(domain)
                 else:
                     policy = dmarc_data["parsed"]["tags"]["p"]["value"]
                     if policy == "none":
                         print_warning(
                             "Defined policy is 'none' in DMARC record for '%s'" % domain)
                         additional_checks_success = False
-                        error_dmarc_policy_domains.append(domain)
+                        if domain not in error_dmarc_policy_domains:
+                            error_dmarc_policy_domains.append(domain)
                     elif policy == "quarantine":
                         print_info(
                             "Defined policy is 'quarantine' in DMARC record for '%s'" % domain)
@@ -221,21 +223,24 @@ def check_domain_security(domains):
                         print_warning(
                             "Unknown policy '%s' in DMARC record for '%s'" % (policy, domain))
                         additional_checks_success = False
-                        error_dmarc_policy_domains.append(domain)
+                        if domain not in error_dmarc_policy_domains:
+                            error_dmarc_policy_domains.append(domain)
                         
                 # Check pct value
                 if not "pct" in dmarc_data["parsed"]["tags"].keys():
                     print_warning(
                         "No 'pct' value defined in DMARC record for '%s'" % domain)
                     additional_checks_success = False
-                    error_dmarc_policy_domains.append(domain)
+                    if domain not in error_dmarc_policy_domains:
+                        error_dmarc_policy_domains.append(domain)
                 else:
                     pct = dmarc_data["parsed"]["tags"]["pct"]["value"]
                     if pct != 100:
                         print_warning(
                             "Defined pct is '%i' in DMARC record for '%s'" % (pct, domain))
                         additional_checks_success = False
-                        error_dmarc_policy_domains.append(domain)
+                        if domain not in error_dmarc_policy_domains:
+                            error_dmarc_policy_domains.append(domain)
                     else:
                         if not dmarc_data["parsed"]["tags"]["pct"]["explicit"]:
                             print_info(
@@ -247,11 +252,12 @@ def check_domain_security(domains):
                         print_warning(
                             "No '%s' value defined in DMARC record for '%s'" % (field, domain))
                         additional_checks_success = False
-                        error_dmarc_policy_domains.append(domain)
+                        if domain not in error_dmarc_policy_domains:
+                            error_dmarc_policy_domains.append(domain)
                     else:
                         # TODO check if it is a valid email
                         pass
-
+                
                 if additional_checks_success:
                     print_success("DMARC correctly configured for '%s'" % domain)
             except checkdmarc.DNSException:
@@ -342,24 +348,29 @@ def check_domain_security(domains):
         for domain in error_dmarc_policy_domains:
             print(Fore.CYAN, "  > %s" % domain)
                      
-def print_error(message, fatal=True):
-    print(Fore.RED, "[!] ERROR: %s" % message)
+def print_error(message, new_section=False, fatal=True):
+    tag = '[!]' if new_section else ' | '
+    print(Fore.RED, f"{tag} ERROR: {message}")
     if fatal:
         sys.exit(1)
 
-def print_warning(message):
-    print(Fore.YELLOW, "[-] WARN: %s" % message)
+def print_warning(message, new_section=False):
+    tag = '[-]' if new_section else ' | '
+    print(Fore.YELLOW, f"{tag} WARN: {message}")
 
-def print_info(message):
-    print(Fore.LIGHTBLUE_EX, "[+] INFO: %s" % message)
+def print_info(message, new_section=False):
+    tag = '[+]' if new_section else ' | '
+    print(Fore.LIGHTBLUE_EX, f"{tag} INFO: {message}")
 
-def print_success(message):
-    print(Fore.GREEN, "[+] INFO: %s" % message)
+def print_success(message, new_section=False):
+    tag = '[+]' if new_section else ' | '
+    print(Fore.GREEN, f"{tag} INFO: {message}")
     
-def print_verbose(message):
+def print_verbose(message, new_section=False):
     global args
+    tag = '[+]' if new_section else ' | '
     if args.verbose:
-        print(Fore.LIGHTBLACK_EX, "    %s" % message)
+        print(Fore.LIGHTBLACK_EX, f"{tag} {message}")
     
 if __name__ == "__main__":
     initialize()
