@@ -97,7 +97,7 @@ def validate_provided_domains(domains):
 
 def check_domain_security(domains):
     global args
-    print_info("Analyzing %d domain(s)..." % len(domains))
+    print_info("Analyzing %d domain(s)..." % len(domains), new_section=True)
 
     spoofable_domains = []
     error_no_spf_domains = []
@@ -131,11 +131,13 @@ def check_domain_security(domains):
                     if spf_value == "softfail":
                         print_warning(
                             "SPF record configured to 'softfail' for '%s'" % domain)
-                        error_spf_policy_domains.append(domain)
+                        if domain not in error_spf_policy_domains:
+                            error_spf_policy_domains.append(domain)
                     else:
                         print_warning(
                             "SPF record missing failure behavior value for '%s'" % domain)
-                        error_spf_policy_domains.append(domain)
+                        if domain not in error_spf_policy_domains:
+                            error_spf_policy_domains.append(domain)
                 else:
                     additional_checks_success = True
                     if args.spf_mandatory_include:
@@ -143,7 +145,8 @@ def check_domain_security(domains):
                         if "include" not in spf_results["parsed"].keys():
                             print_warning(
                                 "No include in SPF record for '%s'" % domain)
-                            error_spf_include_domains.append(domain)
+                            if domain not in error_spf_include_domains:
+                                error_spf_include_domains.append(domain)
                         else:
                             for mandatory_domain in args.spf_mandatory_include:
                                 success = False
@@ -155,7 +158,8 @@ def check_domain_security(domains):
                                     print_warning(
                                         "'%s' is not included in SPF for '%s'. That is not a security issue but may prevent legitimate hosts to send emails." % (mandatory_domain, domain))
                                     additional_checks_success = False
-                                    error_spf_include_domains.append(domain)
+                                    if domain not in error_spf_include_domains:
+                                        error_spf_include_domains.append(domain)
                     if additional_checks_success:
                         print_success("SPF correctly configured for '%s'" % domain)
                     
@@ -165,29 +169,35 @@ def check_domain_security(domains):
             except checkdmarc.SPFIncludeLoop:
                 print_warning(
                     "SPF record contains an 'include' loop for '%s'" % domain)
-                error_spf_validity_domains.append(domain)
+                if domain not in error_spf_validity_domains:
+                    error_spf_validity_domains.append(domain)
             except checkdmarc.SPFRecordNotFound:
                 print_warning("SPF record is missing for '%s'" % domain)
                 spoofing_possible_spf = True
-                error_no_spf_domains.append(domain)
+                if domain not in error_no_spf_domains:
+                    error_no_spf_domains.append(domain)
             except checkdmarc.SPFRedirectLoop:
                 print_warning(
                     "SPF record contains a 'redirect' loop for '%s'" % domain)
-                error_spf_validity_domains.append(domain)
+                if domain not in error_spf_validity_domains:
+                    error_spf_validity_domains.append(domain)
             except checkdmarc.SPFSyntaxError:
                 print_warning(
                     "SPF record contains a syntax error for '%s'" % domain)
                 spoofing_possible_spf = True
-                error_spf_validity_domains.append(domain)
+                if domain not in error_spf_validity_domains:
+                    error_spf_validity_domains.append(domain)
             except checkdmarc.SPFTooManyDNSLookups:
                 print_warning(
                     "SPF record requires too many DNS lookups for '%s'" % domain)
-                error_spf_validity_domains.append(domain)
+                if domain not in error_spf_validity_domains:
+                    error_spf_validity_domains.append(domain)
             except checkdmarc.MultipleSPFRTXTRecords:
                 print_warning(
                     "Multiple SPF records were found for '%s'" % domain)
                 spoofing_possible_spf = True
-                error_spf_validity_domains.append(domain)
+                if domain not in error_spf_validity_domains:
+                    error_spf_validity_domains.append(domain)
             
         # Check DMARC
         if args.only_spf:
@@ -266,37 +276,48 @@ def check_domain_security(domains):
             except checkdmarc.DMARCRecordInWrongLocation:
                 print_warning(
                     "DMARC record is located in the wrong domain for '%s'" % domain)
-                error_dmarc_validity_domains.append(domain)
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
             except checkdmarc.DMARCRecordNotFound:
                 print_warning(
                     "DMARC record is missing for '%s'" % domain)
                 spoofing_possible_dmarc = True
-                error_no_dmarc_domains.append(domain)
+                if domain not in error_no_dmarc_domains:
+                    error_no_dmarc_domains.append(domain)
             except checkdmarc.DMARCReportEmailAddressMissingMXRecords:
                 print_warning(
                     "DMARC record's report URI contains a domain with invalid MX records for '%s'" % domain)
-                error_dmarc_validity_domains.append(domain)
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
             except checkdmarc.DMARCSyntaxError:
                 print_warning(
                     "DMARC record contains a syntax error for '%s'" % domain)
                 spoofing_possible_dmarc = True
-                error_dmarc_validity_domains.append(domain)
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
             except checkdmarc.InvalidDMARCReportURI:
                 print_warning(
                     "DMARC record references an invalid report URI for '%s'" % domain)
-                error_dmarc_validity_domains.append(domain)
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
             except checkdmarc.InvalidDMARCTag:
                 print_warning(
                     "DMARC record contains an invalid tag for '%s'" % domain)
-                error_dmarc_validity_domains.append(domain)
+                
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
             except checkdmarc.MultipleDMARCRecords:
                 print_warning(
                     "Multiple DMARC records were found for '%s'" % domain)
                 spoofing_possible_dmarc = True
-                error_dmarc_validity_domains.append(domain)
+                if domain not in error_dmarc_validity_domains:
+                    error_dmarc_validity_domains.append(domain)
 
         if spoofing_possible_spf or spoofing_possible_dmarc:
-            spoofable_domains.append(domain)
+            if domain not in spoofable_domains:
+                spoofable_domains.append(domain)
+
+    print_info("Finished", new_section=True)
 
     if len(spoofable_domains) > 0:
         print(Fore.CYAN, "\n\n Spoofing possible for %d domain(s): " %
